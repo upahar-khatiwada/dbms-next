@@ -36,8 +36,10 @@ export default function Dashboard() {
     setQueryState((prev) => ({
       ...prev,
       table: selectedTable,
+      select: undefined,
       orderBy: undefined,
       groupBy: undefined,
+      aggregation: undefined,
       where: undefined,
     }));
     setResult(null);
@@ -60,6 +62,10 @@ export default function Dashboard() {
   };
 
   const tableNames = getTableNames();
+  const numericColumns =
+    tableConfig?.columns.filter(
+      (col) => col.type === "number" || col.type === "decimal",
+    ) || [];
 
   return (
     <div className="flex h-screen bg-slate-900 text-slate-100">
@@ -101,6 +107,79 @@ export default function Dashboard() {
             </h2>
 
             <div className="grid grid-cols-2 gap-4 mb-4">
+              {/* SELECT columns */}
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-2">
+                  SELECT COLUMNS
+                </label>
+                <div className="rounded border border-slate-600 bg-slate-700 p-3">
+                  <div className="mb-2 flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setQueryState((prev) => ({
+                          ...prev,
+                          select: tableConfig?.columns.map((col) => col.name),
+                        }))
+                      }
+                      className="rounded bg-slate-600 px-2 py-1 text-xs text-slate-100 hover:bg-slate-500"
+                    >
+                      Select All
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setQueryState((prev) => ({
+                          ...prev,
+                          select: undefined,
+                        }))
+                      }
+                      className="rounded bg-slate-600 px-2 py-1 text-xs text-slate-100 hover:bg-slate-500"
+                    >
+                      Clear
+                    </button>
+                  </div>
+                  <div className="grid max-h-28 grid-cols-2 gap-2 overflow-y-auto pr-1">
+                    {tableConfig?.columns.map((col) => {
+                      const checked = (queryState.select || []).includes(
+                        col.name,
+                      );
+
+                      return (
+                        <label
+                          key={col.name}
+                          className="flex items-center gap-2 text-sm text-slate-200"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            onChange={(e) => {
+                              setQueryState((prev) => {
+                                const current = prev.select || [];
+                                const next = e.target.checked
+                                  ? [...current, col.name]
+                                  : current.filter((name) => name !== col.name);
+
+                                return {
+                                  ...prev,
+                                  select: next.length > 0 ? next : undefined,
+                                };
+                              });
+                            }}
+                            className="h-4 w-4 rounded border-slate-500 bg-slate-800"
+                          />
+                          <span>{col.name}</span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                </div>
+                <p className="mt-1 text-xs text-slate-400">
+                  Leave all unchecked to select all columns. In GROUP BY mode,
+                  selected columns are also grouped.
+                </p>
+              </div>
+
               {/* ORDER BY */}
               <div>
                 <label className="block text-sm font-medium text-slate-300 mb-2">
@@ -166,6 +245,9 @@ export default function Dashboard() {
                     setQueryState((prev) => ({
                       ...prev,
                       groupBy: e.target.value || undefined,
+                      aggregation: e.target.value
+                        ? prev.aggregation || { function: "count" }
+                        : undefined,
                     }))
                   }
                   className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded text-slate-100 focus:outline-none focus:border-blue-500"
@@ -178,6 +260,78 @@ export default function Dashboard() {
                         {col.name}
                       </option>
                     ))}
+                </select>
+              </div>
+            </div>
+
+            {/* Aggregation */}
+            <div className="grid grid-cols-2 gap-4 mb-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-2">
+                  AGG FUNCTION
+                </label>
+                <select
+                  value={queryState.aggregation?.function || "count"}
+                  onChange={(e) =>
+                    setQueryState((prev) => ({
+                      ...prev,
+                      aggregation: {
+                        function: e.target.value as
+                          | "count"
+                          | "sum"
+                          | "avg"
+                          | "min"
+                          | "max",
+                        column:
+                          e.target.value === "count"
+                            ? undefined
+                            : prev.aggregation?.column ||
+                              numericColumns[0]?.name,
+                      },
+                    }))
+                  }
+                  disabled={!queryState.groupBy}
+                  className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded text-slate-100 focus:outline-none focus:border-blue-500 disabled:opacity-50"
+                >
+                  <option value="count">COUNT</option>
+                  <option value="sum">SUM</option>
+                  <option value="avg">AVG</option>
+                  <option value="min">MIN</option>
+                  <option value="max">MAX</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-2">
+                  AGG COLUMN
+                </label>
+                <select
+                  value={queryState.aggregation?.column || ""}
+                  onChange={(e) =>
+                    setQueryState((prev) => ({
+                      ...prev,
+                      aggregation: prev.aggregation
+                        ? {
+                            ...prev.aggregation,
+                            column: e.target.value || undefined,
+                          }
+                        : prev.aggregation,
+                    }))
+                  }
+                  disabled={
+                    !queryState.groupBy ||
+                    queryState.aggregation?.function === "count"
+                  }
+                  className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded text-slate-100 focus:outline-none focus:border-blue-500 disabled:opacity-50"
+                >
+                  <option value="" disabled>
+                    Select numeric column
+                  </option>
+                  {numericColumns.map((col) => (
+                    <option key={col.name} value={col.name}>
+                      {col.name}
+                    </option>
+                  ))}
                 </select>
               </div>
             </div>
@@ -284,11 +438,10 @@ export default function Dashboard() {
               />
             </div>
 
-            {/* Run Button */}
             <button
               onClick={handleRunQuery}
               disabled={loading}
-              className="px-6 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-600 text-white font-medium rounded transition-colors"
+              className="px-6 py-2 cursor-pointer bg-blue-600 hover:bg-blue-700 disabled:bg-slate-600 text-white font-medium rounded transition-colors"
             >
               {loading ? "Running..." : "Run Query"}
             </button>

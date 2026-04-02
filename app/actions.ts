@@ -5,8 +5,13 @@ import { tableConfig } from "@/lib/table-config";
 
 export interface QueryParams {
   table: string;
+  select?: string[];
   orderBy?: { column: string; direction: "asc" | "desc" };
   groupBy?: string;
+  aggregation?: {
+    function: "count" | "sum" | "avg" | "min" | "max";
+    column?: string;
+  };
   where?: { column: string; operator: string; value: string };
   limit?: number;
 }
@@ -29,6 +34,13 @@ async function executePrismaQuery(
   }
 
   const queryOpts: Record<string, unknown> = {};
+
+  // SELECT columns
+  if (params.select && params.select.length > 0) {
+    queryOpts.select = Object.fromEntries(
+      params.select.map((column) => [column, true]),
+    );
+  }
 
   // WHERE clause
   if (params.where) {
@@ -93,10 +105,46 @@ export async function executeQuery(params: QueryParams): Promise<QueryResult> {
       // Use raw SQL for GROUP BY
       const { column: groupColumn, operator, value } = params.where || {};
       const tableName = getTableName(params.table);
-      const columnName = getColumnName(params.table, params.groupBy);
-      const countAlias = "count";
+      const selectedFields =
+        params.select && params.select.length > 0
+          ? params.select
+          : tableConfig[params.table].columns.map((column) => column.name);
+      const groupFields = Array.from(
+        new Set([params.groupBy, ...selectedFields]),
+      );
+      const groupedColumns = groupFields.map((field) => ({
+        field,
+        column: getColumnName(params.table, field),
+      }));
+      const aggregationFunction = params.aggregation?.function || "count";
+      const aggregationColumn = params.aggregation?.column
+        ? getColumnName(params.table, params.aggregation.column)
+        : "*";
 
-      let query = `SELECT "${columnName}", COUNT(*) as "${countAlias}" FROM "${tableName}"`;
+      const aggregationSqlByFn: Record<string, string> = {
+        count:
+          aggregationColumn === "*"
+            ? "COUNT(*)"
+            : `COUNT("${aggregationColumn}")`,
+        sum: `SUM("${aggregationColumn}")`,
+        avg: `AVG("${aggregationColumn}")`,
+        min: `MIN("${aggregationColumn}")`,
+        max: `MAX("${aggregationColumn}")`,
+      };
+      const aggregateExpr =
+        aggregationSqlByFn[aggregationFunction] || aggregationSqlByFn.count;
+      const aggregateAlias =
+        aggregationFunction === "count" && aggregationColumn === "*"
+          ? "count"
+          : `${aggregationFunction}_${aggregationColumn === "*" ? "all" : aggregationColumn}`;
+      const groupedSelectSql = groupedColumns
+        .map(({ field, column }) => `"${column}" as "${field}"`)
+        .join(", ");
+      const groupedBySql = groupedColumns
+        .map(({ column }) => `"${column}"`)
+        .join(", ");
+
+      let query = `SELECT ${groupedSelectSql}, ${aggregateExpr} as "${aggregateAlias}" FROM "${tableName}"`;
 
       if (groupColumn && operator && value) {
         const filterCol = getColumnName(params.table, groupColumn);
@@ -108,13 +156,13 @@ export async function executeQuery(params: QueryParams): Promise<QueryResult> {
         query += ` WHERE ${whereCondition}`;
       }
 
-      query += ` GROUP BY "${columnName}"`;
+      query += ` GROUP BY ${groupedBySql}`;
 
       if (params.orderBy) {
-        const orderCol =
-          params.orderBy.column === params.groupBy
-            ? `"${columnName}"`
-            : `"${countAlias}"`;
+        const isGroupField = groupFields.includes(params.orderBy.column);
+        const orderCol = isGroupField
+          ? `"${params.orderBy.column}"`
+          : `"${aggregateAlias}"`;
         query += ` ORDER BY ${orderCol} ${params.orderBy.direction?.toUpperCase() || "ASC"}`;
       }
 

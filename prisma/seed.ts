@@ -2,6 +2,13 @@ import { TransactionType } from "../generated/prisma/enums.js";
 import { prisma } from "../lib/prisma.js";
 
 async function main() {
+  const transactionTypes = [
+    TransactionType.DEPOSIT,
+    TransactionType.WITHDRAWAL,
+    TransactionType.TRANSFER,
+    TransactionType.PAYMENT,
+  ];
+
   // ── Branches ────────────────────────────────────────────────────────────────
   const branches = await Promise.all([
     prisma.branch.create({
@@ -324,13 +331,98 @@ async function main() {
     ],
   });
 
+  // ── Bulk dataset for meaningful grouping/aggregation ───────────────────────
+  const extraCustomers = await Promise.all(
+    Array.from({ length: 40 }, (_, i) => {
+      const index = i + 1;
+      const year = 1980 + (index % 20);
+      const month = (index % 12) + 1;
+      const day = (index % 28) + 1;
+
+      return prisma.customer.create({
+        data: {
+          name: `Customer ${index}`,
+          address: `Ward ${((index - 1) % 10) + 1}, Kathmandu`,
+          dateOfBirth: new Date(
+            `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`,
+          ),
+          branchId: branches[i % branches.length].branchId,
+        },
+      });
+    }),
+  );
+
+  await prisma.customerPhone.createMany({
+    data: extraCustomers.map((customer, i) => ({
+      customerId: customer.customerId,
+      phoneNumber: `98${(40 + (i % 50)).toString().padStart(2, "0")}-30${String(i + 1).padStart(4, "0")}`,
+    })),
+  });
+
+  const extraAccounts = await Promise.all(
+    Array.from({ length: 80 }, (_, i) =>
+      prisma.account.create({
+        data: {
+          balance: 1000 + (i % 25) * 4000 + i * 175,
+        },
+      }),
+    ),
+  );
+
+  const extraCustomerAccounts = extraAccounts.map((account, i) => ({
+    customerId: extraCustomers[i % extraCustomers.length].customerId,
+    accNo: account.accNo,
+  }));
+
+  await prisma.customerAccount.createMany({
+    data: extraCustomerAccounts,
+  });
+
+  const extraLoans = await Promise.all(
+    Array.from({ length: 30 }, (_, i) =>
+      prisma.loan.create({
+        data: {
+          amount: 25000 + i * 15000,
+        },
+      }),
+    ),
+  );
+
+  await prisma.customerLoan.createMany({
+    data: extraLoans.map((loan, i) => ({
+      customerId: extraCustomers[i % extraCustomers.length].customerId,
+      loanId: loan.loanId,
+    })),
+  });
+
+  const extraTransactions = extraAccounts.flatMap((account, i) =>
+    Array.from({ length: 3 }, (_, j) => {
+      const txIndex = i * 3 + j;
+      const month = (txIndex % 12) + 1;
+      const day = (txIndex % 28) + 1;
+
+      return {
+        accNo: account.accNo,
+        type: transactionTypes[txIndex % transactionTypes.length],
+        amount: 500 + (txIndex % 18) * 850 + j * 100,
+        date: new Date(
+          `2024-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`,
+        ),
+      };
+    }),
+  );
+
+  await prisma.transaction.createMany({
+    data: extraTransactions,
+  });
+
   console.log("✅ Seeding complete!");
   console.log(`   ${branches.length} branches`);
   console.log(`   ${employees.length} employees`);
-  console.log(`   ${customers.length} customers`);
-  console.log(`   ${accounts.length} accounts`);
-  console.log(`   ${loans.length} loans`);
-  console.log("   14 transactions");
+  console.log(`   ${customers.length + extraCustomers.length} customers`);
+  console.log(`   ${accounts.length + extraAccounts.length} accounts`);
+  console.log(`   ${loans.length + extraLoans.length} loans`);
+  console.log(`   ${14 + extraTransactions.length} transactions`);
 }
 
 main()
