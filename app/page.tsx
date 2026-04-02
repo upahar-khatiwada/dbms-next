@@ -13,7 +13,7 @@ interface QueryState extends QueryParams {
 }
 
 interface QueryResultData {
-  data: any[];
+  data: Record<string, unknown>[];
   sql: string | null;
   error?: string;
 }
@@ -330,18 +330,20 @@ export default function Dashboard() {
                             key={idx}
                             className="border-b border-slate-700 hover:bg-slate-700/50"
                           >
-                            {Object.values(row).map((value: any, colIdx) => (
-                              <td
-                                key={colIdx}
-                                className="px-4 py-2 text-slate-100"
-                              >
-                                {value === null
-                                  ? "NULL"
-                                  : value instanceof Date
-                                    ? value.toLocaleString()
-                                    : String(value)}
-                              </td>
-                            ))}
+                            {Object.values(row).map(
+                              (value: unknown, colIdx) => (
+                                <td
+                                  key={colIdx}
+                                  className="px-4 py-2 text-slate-100"
+                                >
+                                  {value === null
+                                    ? "NULL"
+                                    : value instanceof Date
+                                      ? value.toLocaleString()
+                                      : String(value)}
+                                </td>
+                              ),
+                            )}
                           </tr>
                         ))}
                       </tbody>

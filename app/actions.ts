@@ -12,7 +12,7 @@ export interface QueryParams {
 }
 
 export interface QueryResult {
-  data: any[];
+  data: Record<string, unknown>[];
   sql: string | null;
   error?: string;
 }
@@ -20,14 +20,15 @@ export interface QueryResult {
 async function executePrismaQuery(
   table: string,
   params: QueryParams,
-): Promise<any[]> {
-  const prismaTable = (prisma as any)[table];
+): Promise<Record<string, unknown>[]> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const prismaTable = (prisma as unknown as any)[table];
 
   if (!prismaTable) {
     throw new Error(`Table ${table} not found`);
   }
 
-  const queryOpts: any = {};
+  const queryOpts: Record<string, unknown> = {};
 
   // WHERE clause
   if (params.where) {
@@ -54,7 +55,7 @@ function buildWhereClause(
   column: string,
   operator: string,
   value: string,
-): any {
+): Record<string, unknown> {
   // Parse numeric values
   const numValue = !isNaN(Number(value)) ? Number(value) : value;
 
@@ -85,7 +86,7 @@ export async function executeQuery(params: QueryParams): Promise<QueryResult> {
       return { data: [], sql: null, error: `Invalid table: ${params.table}` };
     }
 
-    let data: any[] = [];
+    let data: Record<string, unknown>[] = [];
     let sql: string | null = null;
 
     if (params.groupBy) {
@@ -121,7 +122,8 @@ export async function executeQuery(params: QueryParams): Promise<QueryResult> {
         query += ` LIMIT ${params.limit}`;
       }
 
-      data = await (prisma as any).$queryRawUnsafe(query);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      data = await (prisma as unknown as any).$queryRawUnsafe(query);
       sql = query;
     } else {
       // Use Prisma for standard queries
