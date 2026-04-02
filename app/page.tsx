@@ -69,7 +69,6 @@ export default function Dashboard() {
 
   return (
     <div className="flex h-screen bg-slate-900 text-slate-100">
-      {/* Sidebar */}
       <div className="w-52 border-r border-slate-700 bg-slate-950 p-4 overflow-y-auto">
         <h2 className="text-lg font-semibold text-slate-200 mb-4">Tables</h2>
         <div className="space-y-2">
@@ -77,7 +76,7 @@ export default function Dashboard() {
             <button
               key={table}
               onClick={() => setSelectedTable(table)}
-              className={`w-full text-left px-3 py-2 rounded transition-colors ${
+              className={`w-full cursor-pointer text-left px-3 py-2 rounded transition-colors ${
                 selectedTable === table
                   ? "bg-blue-600 text-white"
                   : "hover:bg-slate-700"
@@ -175,8 +174,9 @@ export default function Dashboard() {
                   </div>
                 </div>
                 <p className="mt-1 text-xs text-slate-400">
-                  Leave all unchecked to select all columns. In GROUP BY mode,
-                  selected columns are also grouped.
+                  Without GROUP BY, leaving all unchecked selects all columns.
+                  With GROUP BY, leaving all unchecked groups by only the GROUP
+                  BY column.
                 </p>
               </div>
 
@@ -336,121 +336,122 @@ export default function Dashboard() {
               </div>
             </div>
 
-            {/* WHERE Filter */}
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-slate-300 mb-2">
-                WHERE Filter
-              </label>
-              <div className="flex gap-2">
-                <select
-                  value={queryState.where?.column || ""}
-                  onChange={(e) =>
-                    setQueryState((prev) =>
-                      e.target.value
-                        ? {
-                            ...prev,
-                            where: {
-                              column: e.target.value,
-                              operator: "=",
-                              value: "",
-                            },
-                          }
-                        : { ...prev, where: undefined },
-                    )
-                  }
-                  className="px-3 py-2 bg-slate-700 border border-slate-600 rounded text-slate-100 focus:outline-none focus:border-blue-500"
-                >
-                  <option value="">None</option>
-                  {tableConfig?.columns
-                    .filter((col) => col.filterable)
-                    .map((col) => (
-                      <option key={col.name} value={col.name}>
-                        {col.name}
-                      </option>
-                    ))}
-                </select>
+            <div className="flex gap-10 items-center">
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-slate-300 mb-2">
+                  WHERE Filter
+                </label>
+                <div className="flex gap-2">
+                  <select
+                    value={queryState.where?.column || ""}
+                    onChange={(e) =>
+                      setQueryState((prev) =>
+                        e.target.value
+                          ? {
+                              ...prev,
+                              where: {
+                                column: e.target.value,
+                                operator: "=",
+                                value: "",
+                              },
+                            }
+                          : { ...prev, where: undefined },
+                      )
+                    }
+                    className="px-3 py-2 bg-slate-700 border border-slate-600 rounded text-slate-100 focus:outline-none focus:border-blue-500"
+                  >
+                    <option value="">None</option>
+                    {tableConfig?.columns
+                      .filter((col) => col.filterable)
+                      .map((col) => (
+                        <option key={col.name} value={col.name}>
+                          {col.name}
+                        </option>
+                      ))}
+                  </select>
 
-                {queryState.where && (
-                  <>
-                    <select
-                      value={queryState.where.operator}
-                      onChange={(e) =>
-                        setQueryState((prev) =>
-                          prev.where
-                            ? {
-                                ...prev,
-                                where: {
-                                  ...prev.where,
-                                  operator: e.target.value,
-                                },
-                              }
-                            : prev,
-                        )
-                      }
-                      className="px-3 py-2 bg-slate-700 border border-slate-600 rounded text-slate-100 focus:outline-none focus:border-blue-500"
-                    >
-                      <option value="=">=</option>
-                      <option value="!=">!=</option>
-                      <option value=">">{">"}</option>
-                      <option value="<">{"<"}</option>
-                      <option value=">=">{">="}</option>
-                      <option value="<=">&lt;=</option>
-                      <option value="LIKE">LIKE</option>
-                    </select>
+                  {queryState.where && (
+                    <>
+                      <select
+                        value={queryState.where.operator}
+                        onChange={(e) =>
+                          setQueryState((prev) =>
+                            prev.where
+                              ? {
+                                  ...prev,
+                                  where: {
+                                    ...prev.where,
+                                    operator: e.target.value,
+                                  },
+                                }
+                              : prev,
+                          )
+                        }
+                        className="px-3 py-2 bg-slate-700 border border-slate-600 rounded text-slate-100 focus:outline-none focus:border-blue-500"
+                      >
+                        <option value="=">=</option>
+                        <option value="!=">!=</option>
+                        <option value=">">{">"}</option>
+                        <option value="<">{"<"}</option>
+                        <option value=">=">{">="}</option>
+                        <option value="<=">&lt;=</option>
+                        <option value="LIKE">LIKE</option>
+                      </select>
 
-                    <input
-                      type="text"
-                      value={queryState.where.value}
-                      onChange={(e) =>
-                        setQueryState((prev) =>
-                          prev.where
-                            ? {
-                                ...prev,
-                                where: { ...prev.where, value: e.target.value },
-                              }
-                            : prev,
-                        )
-                      }
-                      placeholder="Filter value"
-                      className="flex-1 px-3 py-2 bg-slate-700 border border-slate-600 rounded text-slate-100 placeholder-slate-400 focus:outline-none focus:border-blue-500"
-                    />
-                  </>
-                )}
+                      <input
+                        type="text"
+                        value={queryState.where.value}
+                        onChange={(e) =>
+                          setQueryState((prev) =>
+                            prev.where
+                              ? {
+                                  ...prev,
+                                  where: {
+                                    ...prev.where,
+                                    value: e.target.value,
+                                  },
+                                }
+                              : prev,
+                          )
+                        }
+                        placeholder="Filter value"
+                        className="flex-1 px-3 py-2 bg-slate-700 border border-slate-600 rounded text-slate-100 placeholder-slate-400 focus:outline-none focus:border-blue-500"
+                      />
+                    </>
+                  )}
+                </div>
               </div>
-            </div>
 
-            {/* LIMIT */}
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-slate-300 mb-2">
-                LIMIT
-              </label>
-              <input
-                type="number"
-                value={queryState.limit}
-                onChange={(e) =>
-                  setQueryState((prev) => ({
-                    ...prev,
-                    limit: Math.max(1, parseInt(e.target.value) || 1),
-                  }))
-                }
-                min="1"
-                className="w-32 px-3 py-2 bg-slate-700 border border-slate-600 rounded text-slate-100 focus:outline-none focus:border-blue-500"
-              />
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-slate-300 mb-2">
+                  LIMIT
+                </label>
+                <input
+                  type="number"
+                  value={queryState.limit}
+                  onChange={(e) =>
+                    setQueryState((prev) => ({
+                      ...prev,
+                      limit: Math.max(1, parseInt(e.target.value) || 1),
+                    }))
+                  }
+                  min="1"
+                  className="w-32 px-3 py-2 bg-slate-700 border border-slate-600 rounded text-slate-100 focus:outline-none focus:border-blue-500"
+                />
+              </div>
             </div>
 
             <button
               onClick={handleRunQuery}
               disabled={loading}
-              className="px-6 py-2 cursor-pointer bg-blue-600 hover:bg-blue-700 disabled:bg-slate-600 text-white font-medium rounded transition-colors"
+              className="px-6 disabled:cursor-not-allowed disabled:bg-gray-400 py-2 cursor-pointer bg-blue-600 hover:bg-blue-700 text-white font-medium rounded transition-colors"
             >
               {loading ? "Running..." : "Run Query"}
             </button>
           </div>
 
-          {/* Results */}
           {result && (
             <>
-              {/* Results Table */}
               <div className="bg-slate-800 rounded-lg border border-slate-700 p-6">
                 <h2 className="text-lg font-semibold text-slate-200 mb-4">
                   Results ({result.data.length} rows)

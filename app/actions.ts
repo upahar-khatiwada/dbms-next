@@ -22,6 +22,45 @@ export interface QueryResult {
   error?: string;
 }
 
+function toClientSafeValue(value: unknown): unknown {
+  if (value === null || value === undefined) {
+    return value;
+  }
+
+  if (typeof value === "bigint") {
+    return value.toString();
+  }
+
+  if (value instanceof Date) {
+    return value.toISOString();
+  }
+
+  if (Array.isArray(value)) {
+    return value.map((item) => toClientSafeValue(item));
+  }
+
+  if (typeof value === "object") {
+    const decimalLike = value as {
+      constructor?: { name?: string };
+      toString?: () => string;
+    };
+
+    if (decimalLike.constructor?.name === "Decimal") {
+      return decimalLike.toString ? decimalLike.toString() : String(value);
+    }
+
+    const obj = value as Record<string, unknown>;
+    return Object.fromEntries(
+      Object.entries(obj).map(([key, entryValue]) => [
+        key,
+        toClientSafeValue(entryValue),
+      ]),
+    );
+  }
+
+  return value;
+}
+
 async function executePrismaQuery(
   table: string,
   params: QueryParams,
@@ -108,7 +147,7 @@ export async function executeQuery(params: QueryParams): Promise<QueryResult> {
       const selectedFields =
         params.select && params.select.length > 0
           ? params.select
-          : tableConfig[params.table].columns.map((column) => column.name);
+          : [params.groupBy];
       const groupFields = Array.from(
         new Set([params.groupBy, ...selectedFields]),
       );
@@ -179,7 +218,10 @@ export async function executeQuery(params: QueryParams): Promise<QueryResult> {
       sql = getLastQuery();
     }
 
-    return { data, sql };
+    return {
+      data: toClientSafeValue(data) as Record<string, unknown>[],
+      sql,
+    };
   } catch (error) {
     return {
       data: [],
