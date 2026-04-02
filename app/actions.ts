@@ -43,18 +43,24 @@ function toClientSafeValue(value: unknown): unknown {
     const decimalLike = value as {
       constructor?: { name?: string };
       toString?: () => string;
+      d?: unknown;
+      e?: unknown;
+      s?: unknown;
     };
+    const ctorName = decimalLike.constructor?.name || "";
+    const looksLikeDecimal =
+      ctorName.startsWith("Decimal") ||
+      ("d" in decimalLike && "e" in decimalLike && "s" in decimalLike);
 
-    if (decimalLike.constructor?.name === "Decimal") {
+    if (looksLikeDecimal) {
       return decimalLike.toString ? decimalLike.toString() : String(value);
     }
 
     const obj = value as Record<string, unknown>;
     return Object.fromEntries(
-      Object.entries(obj).map(([key, entryValue]) => [
-        key,
-        toClientSafeValue(entryValue),
-      ]),
+      Object.entries(obj)
+        .filter(([, entryValue]) => typeof entryValue !== "function")
+        .map(([key, entryValue]) => [key, toClientSafeValue(entryValue)]),
     );
   }
 
