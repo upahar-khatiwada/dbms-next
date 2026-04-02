@@ -139,6 +139,14 @@ export default function Dashboard() {
       <div className="flex flex-1 flex-col overflow-hidden">
         {/* Header */}
         <div className="border-b border-slate-700 bg-slate-800 p-3 md:p-4">
+          <div className="mt-3 mb-3 rounded border border-slate-600 bg-slate-900/70 px-3 py-2 text-sm text-slate-200">
+            <p className="font-semibold text-xl">
+              Project Work of DBMS made by
+            </p>
+            <p>Upahar Khatiwada (080BCT094)</p>
+            <p>Suparna Neupane(080BCT091)</p>
+            <p>Saurav Adhikari (080BCT079)</p>
+          </div>
           <h1 className="text-xl font-bold text-slate-100 md:text-2xl">
             {resolvedTableConfig?.displayName || "Database Explorer"}
           </h1>
@@ -313,8 +321,7 @@ export default function Dashboard() {
               </div>
             </div>
 
-            {/* Aggregation */}
-            <div className="mb-4 grid grid-cols-1 gap-4 md:grid-cols-2">
+            <div className="mb-4 grid grid-cols-1 gap-4 md:mb-6 lg:grid-cols-2 lg:max-w-3xl">
               <div>
                 <label className="block text-sm font-medium text-slate-300 mb-2">
                   AGG FUNCTION
@@ -385,8 +392,8 @@ export default function Dashboard() {
               </div>
             </div>
 
-            <div className="flex flex-col gap-2 lg:flex-row lg:items-end lg:gap-6">
-              <div className="mb-4 w-full lg:mb-0 lg:flex-1">
+            <div className="mb-2 grid grid-cols-1 gap-4 lg:grid-cols-[minmax(320px,1fr)_130px_auto] lg:items-end lg:max-w-4xl">
+              <div className="w-full">
                 <label className="block text-sm font-medium text-slate-300 mb-2">
                   WHERE Filter
                 </label>
@@ -479,7 +486,7 @@ export default function Dashboard() {
                 </div>
               </div>
 
-              <div className="mb-4 w-full sm:w-auto lg:mb-0">
+              <div className="w-full sm:w-auto">
                 <label className="block text-sm font-medium text-slate-300 mb-2">
                   LIMIT
                 </label>
@@ -493,15 +500,14 @@ export default function Dashboard() {
                     }))
                   }
                   min="1"
-                  className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded text-slate-100 focus:outline-none focus:border-blue-500 sm:w-32"
+                  className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded text-slate-100 focus:outline-none focus:border-blue-500 lg:w-full"
                 />
               </div>
             </div>
-
             <button
               onClick={handleRunQuery}
               disabled={loading}
-              className="w-full cursor-pointer rounded bg-blue-600 px-6 py-2 font-medium text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-gray-400 sm:w-auto"
+              className="w-full cursor-pointer rounded bg-blue-600 px-6 py-2 font-medium text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-gray-400 lg:w-auto"
             >
               {loading ? "Running..." : "Run Query"}
             </button>
