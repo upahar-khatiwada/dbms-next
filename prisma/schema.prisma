@@ -1,0 +1,136 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum TransactionType {
+  DEPOSIT
+  WITHDRAWAL
+  TRANSFER
+  PAYMENT
+}
+
+model Customer {
+  customerId  Int      @id @default(autoincrement()) @map("customer_id")
+  name        String
+  address     String?
+  dateOfBirth DateTime @map("date_of_birth")
+  // age is derived from dateOfBirth — not stored
+
+  branchId Int    @map("branch_id")
+  branch   Branch @relation(fields: [branchId], references: [branchId])
+
+  phoneNumbers    CustomerPhone[]
+  customerAccount CustomerAccount[]
+  customerLoan    CustomerLoan[]
+
+  @@map("customer")
+}
+
+model CustomerPhone {
+  id          Int    @id @default(autoincrement())
+  customerId  Int    @map("customer_id")
+  phoneNumber String @map("phone_number")
+
+  customer Customer @relation(fields: [customerId], references: [customerId])
+
+  @@map("customer_phone")
+}
+
+model Account {
+  accNo   Int     @id @default(autoincrement()) @map("acc_no")
+  balance Decimal @default(0)
+
+  transactions    Transaction[]
+  customerAccount CustomerAccount[]
+
+  @@map("account")
+}
+
+// Junction table: Customer <-> Account (many-to-many)
+model CustomerAccount {
+  customerId Int @map("customer_id")
+  accNo      Int @map("acc_no")
+
+  customer Customer @relation(fields: [customerId], references: [customerId])
+  account  Account  @relation(fields: [accNo], references: [accNo])
+
+  @@id([customerId, accNo])
+  @@map("customer_account")
+}
+
+model Loan {
+  loanId Int     @id @default(autoincrement()) @map("loan_id")
+  amount Decimal
+
+  customerLoan CustomerLoan[]
+
+  @@map("loan")
+}
+
+// Junction table: Customer <-> Loan (many-to-many)
+model CustomerLoan {
+  customerId Int @map("customer_id")
+  loanId     Int @map("loan_id")
+
+  customer Customer @relation(fields: [customerId], references: [customerId])
+  loan     Loan     @relation(fields: [loanId], references: [loanId])
+
+  @@id([customerId, loanId])
+  @@map("customer_loan")
+}
+
+model Transaction {
+  transactionId Int             @id @default(autoincrement()) @map("transaction_id")
+  accNo         Int             @map("acc_no")
+  type          TransactionType
+  amount        Decimal
+  date          DateTime        @default(now())
+
+  account Account @relation(fields: [accNo], references: [accNo])
+
+  @@map("transactions")
+}
+
+model Branch {
+  branchId Int     @id @default(autoincrement()) @map("branch_id")
+  name     String
+  address  String?
+
+  customers Customer[]
+  employees Employee[]
+
+  @@map("branch")
+}
+
+model Employee {
+  employeeId Int     @id @default(autoincrement()) @map("employee_id")
+  branchId   Int     @map("branch_id")
+  name       String
+  address    String?
+  salary     Decimal
+
+  branch       Branch          @relation(fields: [branchId], references: [branchId])
+  phoneNumbers EmployeePhone[]
+
+  @@map("employee")
+}
+
+model EmployeePhone {
+  id          Int    @id @default(autoincrement())
+  employeeId  Int    @map("employee_id")
+  phoneNumber String @map("phone_number")
+
+  employee Employee @relation(fields: [employeeId], references: [employeeId])
+
+  @@map("employee_phone")
+}

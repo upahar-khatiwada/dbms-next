@@ -1,65 +1,377 @@
-import Image from "next/image";
+"use client";
 
-export default function Home() {
+import { useState, useEffect } from "react";
+import { executeQuery, type QueryParams } from "@/app/actions";
+import {
+  getTableNames,
+  getTableConfig,
+  type TableDef,
+} from "@/lib/table-config";
+
+interface QueryState extends QueryParams {
+  limit: number;
+}
+
+interface QueryResultData {
+  data: any[];
+  sql: string | null;
+  error?: string;
+}
+
+export default function Dashboard() {
+  const [selectedTable, setSelectedTable] = useState<string>("Customer");
+  const [tableConfig, setTableConfig] = useState<TableDef | null>(null);
+  const [queryState, setQueryState] = useState<QueryState>({
+    table: "Customer",
+    limit: 50,
+  });
+  const [result, setResult] = useState<QueryResultData | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  // Load table config when selected table changes
+  useEffect(() => {
+    const config = getTableConfig(selectedTable);
+    setTableConfig(config);
+    setSelectedTable(selectedTable);
+    setQueryState((prev) => ({
+      ...prev,
+      table: selectedTable,
+      orderBy: undefined,
+      groupBy: undefined,
+      where: undefined,
+    }));
+    setResult(null);
+  }, [selectedTable]);
+
+  const handleRunQuery = async () => {
+    setLoading(true);
+    try {
+      const result = await executeQuery(queryState);
+      setResult(result);
+    } catch (error) {
+      setResult({
+        data: [],
+        sql: null,
+        error: error instanceof Error ? error.message : "Unknown error",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const tableNames = getTableNames();
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
+    <div className="flex h-screen bg-slate-900 text-slate-100">
+      {/* Sidebar */}
+      <div className="w-52 border-r border-slate-700 bg-slate-950 p-4 overflow-y-auto">
+        <h2 className="text-lg font-semibold text-slate-200 mb-4">Tables</h2>
+        <div className="space-y-2">
+          {tableNames.map((table) => (
+            <button
+              key={table}
+              onClick={() => setSelectedTable(table)}
+              className={`w-full text-left px-3 py-2 rounded transition-colors ${
+                selectedTable === table
+                  ? "bg-blue-600 text-white"
+                  : "hover:bg-slate-700"
+              }`}
+            >
+              {getTableConfig(table)?.displayName || table}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Main Content */}
+      <div className="flex-1 flex flex-col overflow-hidden">
+        {/* Header */}
+        <div className="border-b border-slate-700 bg-slate-800 p-4">
+          <h1 className="text-2xl font-bold text-slate-100">
+            {tableConfig?.displayName || "Database Explorer"}
           </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+
+        {/* Content Area */}
+        <div className="flex-1 overflow-auto p-6 space-y-6">
+          {/* Query Builder */}
+          <div className="bg-slate-800 rounded-lg border border-slate-700 p-6">
+            <h2 className="text-lg font-semibold text-slate-200 mb-4">
+              Query Builder
+            </h2>
+
+            <div className="grid grid-cols-2 gap-4 mb-4">
+              {/* ORDER BY */}
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-2">
+                  ORDER BY
+                </label>
+                <div className="flex gap-2">
+                  <select
+                    value={queryState.orderBy?.column || ""}
+                    onChange={(e) =>
+                      setQueryState((prev) =>
+                        e.target.value
+                          ? {
+                              ...prev,
+                              orderBy: {
+                                column: e.target.value,
+                                direction: "asc",
+                              },
+                            }
+                          : { ...prev, orderBy: undefined },
+                      )
+                    }
+                    className="flex-1 px-3 py-2 bg-slate-700 border border-slate-600 rounded text-slate-100 focus:outline-none focus:border-blue-500"
+                  >
+                    <option value="">None</option>
+                    {tableConfig?.columns.map((col) => (
+                      <option key={col.name} value={col.name}>
+                        {col.name}
+                      </option>
+                    ))}
+                  </select>
+                  <select
+                    value={queryState.orderBy?.direction || "asc"}
+                    onChange={(e) =>
+                      setQueryState((prev) =>
+                        prev.orderBy
+                          ? {
+                              ...prev,
+                              orderBy: {
+                                ...prev.orderBy,
+                                direction: e.target.value as "asc" | "desc",
+                              },
+                            }
+                          : prev,
+                      )
+                    }
+                    disabled={!queryState.orderBy}
+                    className="px-3 py-2 bg-slate-700 border border-slate-600 rounded text-slate-100 focus:outline-none focus:border-blue-500 disabled:opacity-50"
+                  >
+                    <option value="asc">ASC</option>
+                    <option value="desc">DESC</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* GROUP BY */}
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-2">
+                  GROUP BY
+                </label>
+                <select
+                  value={queryState.groupBy || ""}
+                  onChange={(e) =>
+                    setQueryState((prev) => ({
+                      ...prev,
+                      groupBy: e.target.value || undefined,
+                    }))
+                  }
+                  className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded text-slate-100 focus:outline-none focus:border-blue-500"
+                >
+                  <option value="">None</option>
+                  {tableConfig?.columns
+                    .filter((col) => col.groupable)
+                    .map((col) => (
+                      <option key={col.name} value={col.name}>
+                        {col.name}
+                      </option>
+                    ))}
+                </select>
+              </div>
+            </div>
+
+            {/* WHERE Filter */}
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-slate-300 mb-2">
+                WHERE Filter
+              </label>
+              <div className="flex gap-2">
+                <select
+                  value={queryState.where?.column || ""}
+                  onChange={(e) =>
+                    setQueryState((prev) =>
+                      e.target.value
+                        ? {
+                            ...prev,
+                            where: {
+                              column: e.target.value,
+                              operator: "=",
+                              value: "",
+                            },
+                          }
+                        : { ...prev, where: undefined },
+                    )
+                  }
+                  className="px-3 py-2 bg-slate-700 border border-slate-600 rounded text-slate-100 focus:outline-none focus:border-blue-500"
+                >
+                  <option value="">None</option>
+                  {tableConfig?.columns
+                    .filter((col) => col.filterable)
+                    .map((col) => (
+                      <option key={col.name} value={col.name}>
+                        {col.name}
+                      </option>
+                    ))}
+                </select>
+
+                {queryState.where && (
+                  <>
+                    <select
+                      value={queryState.where.operator}
+                      onChange={(e) =>
+                        setQueryState((prev) =>
+                          prev.where
+                            ? {
+                                ...prev,
+                                where: {
+                                  ...prev.where,
+                                  operator: e.target.value,
+                                },
+                              }
+                            : prev,
+                        )
+                      }
+                      className="px-3 py-2 bg-slate-700 border border-slate-600 rounded text-slate-100 focus:outline-none focus:border-blue-500"
+                    >
+                      <option value="=">=</option>
+                      <option value="!=">!=</option>
+                      <option value=">">{">"}</option>
+                      <option value="<">{"<"}</option>
+                      <option value=">=">{">="}</option>
+                      <option value="<=">&lt;=</option>
+                      <option value="LIKE">LIKE</option>
+                    </select>
+
+                    <input
+                      type="text"
+                      value={queryState.where.value}
+                      onChange={(e) =>
+                        setQueryState((prev) =>
+                          prev.where
+                            ? {
+                                ...prev,
+                                where: { ...prev.where, value: e.target.value },
+                              }
+                            : prev,
+                        )
+                      }
+                      placeholder="Filter value"
+                      className="flex-1 px-3 py-2 bg-slate-700 border border-slate-600 rounded text-slate-100 placeholder-slate-400 focus:outline-none focus:border-blue-500"
+                    />
+                  </>
+                )}
+              </div>
+            </div>
+
+            {/* LIMIT */}
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-slate-300 mb-2">
+                LIMIT
+              </label>
+              <input
+                type="number"
+                value={queryState.limit}
+                onChange={(e) =>
+                  setQueryState((prev) => ({
+                    ...prev,
+                    limit: Math.max(1, parseInt(e.target.value) || 1),
+                  }))
+                }
+                min="1"
+                className="w-32 px-3 py-2 bg-slate-700 border border-slate-600 rounded text-slate-100 focus:outline-none focus:border-blue-500"
+              />
+            </div>
+
+            {/* Run Button */}
+            <button
+              onClick={handleRunQuery}
+              disabled={loading}
+              className="px-6 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-600 text-white font-medium rounded transition-colors"
+            >
+              {loading ? "Running..." : "Run Query"}
+            </button>
+          </div>
+
+          {/* Results */}
+          {result && (
+            <>
+              {/* Results Table */}
+              <div className="bg-slate-800 rounded-lg border border-slate-700 p-6">
+                <h2 className="text-lg font-semibold text-slate-200 mb-4">
+                  Results ({result.data.length} rows)
+                </h2>
+
+                {result.error ? (
+                  <div className="p-4 bg-red-900/30 border border-red-800 rounded text-red-200">
+                    {result.error}
+                  </div>
+                ) : result.data.length === 0 ? (
+                  <div className="p-4 text-slate-400">No results found</div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b border-slate-600">
+                          {Object.keys(result.data[0] || {}).map((key) => (
+                            <th
+                              key={key}
+                              className="px-4 py-2 text-left text-slate-300 font-semibold"
+                            >
+                              {key}
+                            </th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {result.data.slice(0, 100).map((row, idx) => (
+                          <tr
+                            key={idx}
+                            className="border-b border-slate-700 hover:bg-slate-700/50"
+                          >
+                            {Object.values(row).map((value: any, colIdx) => (
+                              <td
+                                key={colIdx}
+                                className="px-4 py-2 text-slate-100"
+                              >
+                                {value === null
+                                  ? "NULL"
+                                  : value instanceof Date
+                                    ? value.toLocaleString()
+                                    : String(value)}
+                              </td>
+                            ))}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                    {result.data.length > 100 && (
+                      <div className="mt-4 text-slate-400 text-sm">
+                        Showing first 100 of {result.data.length} rows
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* SQL Viewer */}
+              {result.sql && (
+                <div className="bg-slate-800 rounded-lg border border-slate-700 p-6">
+                  <h2 className="text-lg font-semibold text-slate-200 mb-4">
+                    SQL Query
+                  </h2>
+                  <pre className="bg-slate-900 border border-slate-600 rounded p-4 overflow-x-auto">
+                    <code className="text-slate-100 font-mono text-sm">
+                      {result.sql}
+                    </code>
+                  </pre>
+                </div>
+              )}
+            </>
+          )}
         </div>
-      </main>
+      </div>
     </div>
   );
 }
