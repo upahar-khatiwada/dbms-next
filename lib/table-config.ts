@@ -22,7 +22,7 @@ export const tableConfig: Record<string, TableDef> = {
     columns: [
       { name: "customerId", type: "number", groupable: true, filterable: true },
       { name: "name", type: "string", groupable: true, filterable: true },
-      { name: "address", type: "string", filterable: true },
+      { name: "address", type: "string", groupable: true, filterable: true },
       { name: "dateOfBirth", type: "date", filterable: true },
       { name: "branchId", type: "number", groupable: true, filterable: true },
     ],
@@ -65,7 +65,7 @@ export const tableConfig: Record<string, TableDef> = {
     columns: [
       { name: "branchId", type: "number", groupable: true, filterable: true },
       { name: "name", type: "string", groupable: true, filterable: true },
-      { name: "address", type: "string", filterable: true },
+      { name: "address", type: "string", groupable: true, filterable: true },
     ],
   },
   Employee: {
@@ -75,8 +75,8 @@ export const tableConfig: Record<string, TableDef> = {
       { name: "employeeId", type: "number", groupable: true, filterable: true },
       { name: "branchId", type: "number", groupable: true, filterable: true },
       { name: "name", type: "string", groupable: true, filterable: true },
-      { name: "address", type: "string", filterable: true },
-      { name: "salary", type: "decimal", filterable: true },
+      { name: "address", type: "string", groupable: true, filterable: true },
+      { name: "salary", type: "decimal", groupable: true, filterable: true },
     ],
   },
   CustomerPhone: {
