@@ -113,15 +113,17 @@ export default function Dashboard() {
     : ["="];
 
   return (
-    <div className="flex h-screen bg-slate-900 text-slate-100">
-      <div className="w-52 border-r border-slate-700 bg-slate-950 p-4 overflow-y-auto">
-        <h2 className="text-lg font-semibold text-slate-200 mb-4">Tables</h2>
-        <div className="space-y-2">
+    <div className="flex min-h-screen flex-col bg-slate-900 text-slate-100 md:h-screen md:flex-row">
+      <div className="w-full overflow-x-auto border-b border-slate-700 bg-slate-950 p-3 md:w-52 md:overflow-y-auto md:border-b-0 md:border-r md:p-4">
+        <h2 className="mb-3 text-base font-semibold text-slate-200 md:mb-4 md:text-lg">
+          Tables
+        </h2>
+        <div className="flex gap-2 md:block md:space-y-2">
           {tableNames.map((table) => (
             <button
               key={table}
               onClick={() => setSelectedTable(table)}
-              className={`w-full cursor-pointer text-left px-3 py-2 rounded transition-colors ${
+              className={`shrink-0 cursor-pointer rounded px-3 py-2 text-left transition-colors md:w-full ${
                 selectedTable === table
                   ? "bg-blue-600 text-white"
                   : "hover:bg-slate-700"
@@ -134,23 +136,23 @@ export default function Dashboard() {
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col overflow-hidden">
+      <div className="flex flex-1 flex-col overflow-hidden">
         {/* Header */}
-        <div className="border-b border-slate-700 bg-slate-800 p-4">
-          <h1 className="text-2xl font-bold text-slate-100">
+        <div className="border-b border-slate-700 bg-slate-800 p-3 md:p-4">
+          <h1 className="text-xl font-bold text-slate-100 md:text-2xl">
             {resolvedTableConfig?.displayName || "Database Explorer"}
           </h1>
         </div>
 
         {/* Content Area */}
-        <div className="flex-1 overflow-auto p-6 space-y-6">
+        <div className="flex-1 space-y-4 overflow-auto p-3 md:space-y-6 md:p-6">
           {/* Query Builder */}
-          <div className="bg-slate-800 rounded-lg border border-slate-700 p-6">
+          <div className="rounded-lg border border-slate-700 bg-slate-800 p-4 md:p-6">
             <h2 className="text-lg font-semibold text-slate-200 mb-4">
               Query Builder
             </h2>
 
-            <div className="grid grid-cols-2 gap-4 mb-4">
+            <div className="mb-4 grid grid-cols-1 gap-4 md:grid-cols-2">
               {/* SELECT columns */}
               <div>
                 <label className="block text-sm font-medium text-slate-300 mb-2">
@@ -185,7 +187,7 @@ export default function Dashboard() {
                       Clear
                     </button>
                   </div>
-                  <div className="grid max-h-28 grid-cols-2 gap-2 overflow-y-auto pr-1">
+                  <div className="grid max-h-32 grid-cols-1 gap-2 overflow-y-auto pr-1 sm:grid-cols-2">
                     {resolvedTableConfig?.columns.map((col) => {
                       const checked = (queryState.select || []).includes(
                         col.name,
@@ -232,7 +234,7 @@ export default function Dashboard() {
                 <label className="block text-sm font-medium text-slate-300 mb-2">
                   ORDER BY
                 </label>
-                <div className="flex gap-2">
+                <div className="flex flex-col gap-2 sm:flex-row">
                   <select
                     value={queryState.orderBy?.column || ""}
                     onChange={(e) =>
@@ -248,7 +250,7 @@ export default function Dashboard() {
                           : { ...prev, orderBy: undefined },
                       )
                     }
-                    className="flex-1 px-3 py-2 bg-slate-700 border border-slate-600 rounded text-slate-100 focus:outline-none focus:border-blue-500"
+                    className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded text-slate-100 focus:outline-none focus:border-blue-500 sm:flex-1"
                   >
                     <option value="">None</option>
                     {resolvedTableConfig?.columns.map((col) => (
@@ -312,7 +314,7 @@ export default function Dashboard() {
             </div>
 
             {/* Aggregation */}
-            <div className="grid grid-cols-2 gap-4 mb-4">
+            <div className="mb-4 grid grid-cols-1 gap-4 md:grid-cols-2">
               <div>
                 <label className="block text-sm font-medium text-slate-300 mb-2">
                   AGG FUNCTION
@@ -383,12 +385,12 @@ export default function Dashboard() {
               </div>
             </div>
 
-            <div className="flex gap-10 items-center">
-              <div className="mb-4">
+            <div className="flex flex-col gap-2 lg:flex-row lg:items-end lg:gap-6">
+              <div className="mb-4 w-full lg:mb-0 lg:flex-1">
                 <label className="block text-sm font-medium text-slate-300 mb-2">
                   WHERE Filter
                 </label>
-                <div className="flex gap-2">
+                <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
                   <select
                     value={queryState.where?.column || ""}
                     onChange={(e) =>
@@ -414,7 +416,7 @@ export default function Dashboard() {
                         };
                       })
                     }
-                    className="px-3 py-2 bg-slate-700 border border-slate-600 rounded text-slate-100 focus:outline-none focus:border-blue-500"
+                    className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded text-slate-100 focus:outline-none focus:border-blue-500 sm:w-auto sm:min-w-44"
                   >
                     <option value="">None</option>
                     {resolvedTableConfig?.columns
@@ -444,7 +446,7 @@ export default function Dashboard() {
                               : prev,
                           )
                         }
-                        className="px-3 py-2 bg-slate-700 border border-slate-600 rounded text-slate-100 focus:outline-none focus:border-blue-500"
+                        className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded text-slate-100 focus:outline-none focus:border-blue-500 sm:w-auto"
                       >
                         {whereOperators.map((operator) => (
                           <option key={operator} value={operator}>
@@ -470,14 +472,14 @@ export default function Dashboard() {
                           )
                         }
                         placeholder="Filter value"
-                        className="flex-1 px-3 py-2 bg-slate-700 border border-slate-600 rounded text-slate-100 placeholder-slate-400 focus:outline-none focus:border-blue-500"
+                        className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded text-slate-100 placeholder-slate-400 focus:outline-none focus:border-blue-500 sm:min-w-52 sm:flex-1"
                       />
                     </>
                   )}
                 </div>
               </div>
 
-              <div className="mb-4">
+              <div className="mb-4 w-full sm:w-auto lg:mb-0">
                 <label className="block text-sm font-medium text-slate-300 mb-2">
                   LIMIT
                 </label>
@@ -491,7 +493,7 @@ export default function Dashboard() {
                     }))
                   }
                   min="1"
-                  className="w-32 px-3 py-2 bg-slate-700 border border-slate-600 rounded text-slate-100 focus:outline-none focus:border-blue-500"
+                  className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded text-slate-100 focus:outline-none focus:border-blue-500 sm:w-32"
                 />
               </div>
             </div>
@@ -499,7 +501,7 @@ export default function Dashboard() {
             <button
               onClick={handleRunQuery}
               disabled={loading}
-              className="px-6 disabled:cursor-not-allowed disabled:bg-gray-400 py-2 cursor-pointer bg-blue-600 hover:bg-blue-700 text-white font-medium rounded transition-colors"
+              className="w-full cursor-pointer rounded bg-blue-600 px-6 py-2 font-medium text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-gray-400 sm:w-auto"
             >
               {loading ? "Running..." : "Run Query"}
             </button>
@@ -507,7 +509,7 @@ export default function Dashboard() {
 
           {result && (
             <>
-              <div className="bg-slate-800 rounded-lg border border-slate-700 p-6">
+              <div className="rounded-lg border border-slate-700 bg-slate-800 p-4 md:p-6">
                 <h2 className="text-lg font-semibold text-slate-200 mb-4">
                   Results ({result.data.length} rows)
                 </h2>
@@ -520,13 +522,13 @@ export default function Dashboard() {
                   <div className="p-4 text-slate-400">No results found</div>
                 ) : (
                   <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
+                    <table className="w-full text-xs sm:text-sm">
                       <thead>
                         <tr className="border-b border-slate-600">
                           {Object.keys(result.data[0] || {}).map((key) => (
                             <th
                               key={key}
-                              className="px-4 py-2 text-left text-slate-300 font-semibold"
+                              className="px-2 py-2 text-left font-semibold text-slate-300 sm:px-4"
                             >
                               {key}
                             </th>
@@ -543,7 +545,7 @@ export default function Dashboard() {
                               (value: unknown, colIdx) => (
                                 <td
                                   key={colIdx}
-                                  className="px-4 py-2 text-slate-100"
+                                  className="px-2 py-2 text-slate-100 sm:px-4"
                                 >
                                   {value === null
                                     ? "NULL"
@@ -568,7 +570,7 @@ export default function Dashboard() {
 
               {/* SQL Viewer */}
               {result.sql && (
-                <div className="bg-slate-800 rounded-lg border border-slate-700 p-6">
+                <div className="rounded-lg border border-slate-700 bg-slate-800 p-4 md:p-6">
                   <h2 className="text-lg font-semibold text-slate-200 mb-4">
                     SQL Query
                   </h2>
@@ -586,4 +588,3 @@ export default function Dashboard() {
     </div>
   );
 }
- 
