@@ -1,7 +1,15 @@
 "use server";
 
 import { prisma, getLastQuery } from "@/lib/prisma";
-import { tableConfig } from "@/lib/table-config";
+import { tableConfig, type ColumnType } from "@/lib/table-config";
+
+const OPERATORS_BY_TYPE: Record<ColumnType, string[]> = {
+  string: ["=", "!=", "LIKE"],
+  enum: ["=", "!=", "LIKE"],
+  number: ["=", "!=", ">", "<", ">=", "<="],
+  decimal: ["=", "!=", ">", "<", ">=", "<="],
+  date: ["=", "!=", ">", "<", ">=", "<="],
+};
 
 export interface QueryParams {
   table: string;
@@ -90,7 +98,7 @@ async function executePrismaQuery(
   // WHERE clause
   if (params.where) {
     const { column, operator, value } = params.where;
-    queryOpts.where = buildWhereClause(column, operator, value);
+    queryOpts.where = buildWhereClause(table, column, operator, value);
   }
 
   // ORDER BY
@@ -109,26 +117,28 @@ async function executePrismaQuery(
 }
 
 function buildWhereClause(
+  table: string,
   column: string,
   operator: string,
   value: string,
 ): Record<string, unknown> {
-  // Parse numeric values
-  const numValue = !isNaN(Number(value)) ? Number(value) : value;
+  const columnType = getColumnType(table, column);
+  const safeOperator = normalizeOperator(operator, columnType);
+  const parsedValue = parseFilterValue(value, columnType);
 
-  switch (operator) {
+  switch (safeOperator) {
     case "=":
-      return { [column]: numValue };
+      return { [column]: parsedValue };
     case "!=":
-      return { [column]: { not: numValue } };
+      return { [column]: { not: parsedValue } };
     case ">":
-      return { [column]: { gt: numValue } };
+      return { [column]: { gt: parsedValue } };
     case "<":
-      return { [column]: { lt: numValue } };
+      return { [column]: { lt: parsedValue } };
     case ">=":
-      return { [column]: { gte: numValue } };
+      return { [column]: { gte: parsedValue } };
     case "<=":
-      return { [column]: { lte: numValue } };
+      return { [column]: { lte: parsedValue } };
     case "LIKE":
       return { [column]: { contains: value, mode: "insensitive" } };
     default:
@@ -148,7 +158,7 @@ export async function executeQuery(params: QueryParams): Promise<QueryResult> {
 
     if (params.groupBy) {
       // Use raw SQL for GROUP BY
-      const { column: groupColumn, operator, value } = params.where || {};
+      const { column: whereColumn, operator, value } = params.where || {};
       const tableName = getTableName(params.table);
       const selectedFields =
         params.select && params.select.length > 0
@@ -191,12 +201,19 @@ export async function executeQuery(params: QueryParams): Promise<QueryResult> {
 
       let query = `SELECT ${groupedSelectSql}, ${aggregateExpr} as "${aggregateAlias}" FROM "${tableName}"`;
 
-      if (groupColumn && operator && value) {
-        const filterCol = getColumnName(params.table, groupColumn);
+      if (
+        whereColumn &&
+        operator &&
+        value !== undefined &&
+        value.trim().length > 0
+      ) {
+        const filterCol = getColumnName(params.table, whereColumn);
+        const filterType = getColumnType(params.table, whereColumn);
         const whereCondition = buildSqlWhereCondition(
           filterCol,
           operator,
           value,
+          filterType,
         );
         query += ` WHERE ${whereCondition}`;
       }
@@ -301,30 +318,67 @@ function getColumnName(modelName: string, fieldName: string): string {
   return map[fieldName] || fieldName;
 }
 
+function getColumnType(
+  modelName: string,
+  fieldName: string,
+): ColumnType | undefined {
+  return tableConfig[modelName]?.columns.find((col) => col.name === fieldName)
+    ?.type;
+}
+
+function parseFilterValue(
+  value: string,
+  columnType?: ColumnType,
+): string | number {
+  const isNumericColumn = columnType === "number" || columnType === "decimal";
+
+  if (!isNumericColumn) {
+    return value;
+  }
+
+  const parsed = Number(value);
+  return Number.isNaN(parsed) ? value : parsed;
+}
+
+function normalizeOperator(operator: string, columnType?: ColumnType): string {
+  if (!columnType) {
+    return operator;
+  }
+
+  const allowed = OPERATORS_BY_TYPE[columnType] || ["="];
+  return allowed.includes(operator) ? operator : allowed[0] || "=";
+}
+
 function buildSqlWhereCondition(
   column: string,
   operator: string,
   value: string,
+  columnType?: ColumnType,
 ): string {
-  const numValue = !isNaN(Number(value))
-    ? Number(value)
-    : `'${value.replace(/'/g, "''")}'`;
+  const safeOperator = normalizeOperator(operator, columnType);
+  const escapedValue = value.replace(/'/g, "''");
+  const isNumericColumn = columnType === "number" || columnType === "decimal";
+  const numericValue = Number(value);
+  const sqlValue =
+    isNumericColumn && !Number.isNaN(numericValue)
+      ? String(numericValue)
+      : `'${escapedValue}'`;
 
-  switch (operator) {
+  switch (safeOperator) {
     case "=":
-      return `"${column}" = ${numValue}`;
+      return `"${column}" = ${sqlValue}`;
     case "!=":
-      return `"${column}" != ${numValue}`;
+      return `"${column}" != ${sqlValue}`;
     case ">":
-      return `"${column}" > ${numValue}`;
+      return `"${column}" > ${sqlValue}`;
     case "<":
-      return `"${column}" < ${numValue}`;
+      return `"${column}" < ${sqlValue}`;
     case ">=":
-      return `"${column}" >= ${numValue}`;
+      return `"${column}" >= ${sqlValue}`;
     case "<=":
-      return `"${column}" <= ${numValue}`;
+      return `"${column}" <= ${sqlValue}`;
     case "LIKE":
-      return `"${column}" ILIKE '%${(value as string).replace(/'/g, "''")}%'`;
+      return `"${column}" ILIKE '%${escapedValue}%'`;
     default:
       return "";
   }

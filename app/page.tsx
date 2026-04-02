@@ -5,8 +5,17 @@ import { executeQuery, type QueryParams } from "@/app/actions";
 import {
   getTableNames,
   getTableConfig,
+  type ColumnType,
   type TableDef,
 } from "@/lib/table-config";
+
+const OPERATORS_BY_TYPE: Record<ColumnType, string[]> = {
+  string: ["=", "!=", "LIKE"],
+  enum: ["=", "!=", "LIKE"],
+  number: ["=", "!=", ">", "<", ">=", "<="],
+  decimal: ["=", "!=", ">", "<", ">=", "<="],
+  date: ["=", "!=", ">", "<", ">=", "<="],
+};
 
 interface QueryState extends QueryParams {
   limit: number;
@@ -32,7 +41,6 @@ export default function Dashboard() {
   useEffect(() => {
     const config = getTableConfig(selectedTable);
     setTableConfig(config);
-    setSelectedTable(selectedTable);
     setQueryState((prev) => ({
       ...prev,
       table: selectedTable,
@@ -44,6 +52,37 @@ export default function Dashboard() {
     }));
     setResult(null);
   }, [selectedTable]);
+
+  const resolvedTableConfig = getTableConfig(selectedTable) || tableConfig;
+
+  useEffect(() => {
+    if (!queryState.where || !resolvedTableConfig) {
+      return;
+    }
+
+    const selectedColumn = resolvedTableConfig.columns.find(
+      (col) => col.name === queryState.where?.column,
+    );
+
+    if (!selectedColumn) {
+      return;
+    }
+
+    const allowedOperators = OPERATORS_BY_TYPE[selectedColumn.type];
+    if (!allowedOperators.includes(queryState.where.operator)) {
+      setQueryState((prev) =>
+        prev.where
+          ? {
+              ...prev,
+              where: {
+                ...prev.where,
+                operator: allowedOperators[0] || "=",
+              },
+            }
+          : prev,
+      );
+    }
+  }, [queryState.where, resolvedTableConfig]);
 
   const handleRunQuery = async () => {
     setLoading(true);
@@ -63,9 +102,15 @@ export default function Dashboard() {
 
   const tableNames = getTableNames();
   const numericColumns =
-    tableConfig?.columns.filter(
+    resolvedTableConfig?.columns.filter(
       (col) => col.type === "number" || col.type === "decimal",
     ) || [];
+  const selectedWhereColumn = resolvedTableConfig?.columns.find(
+    (col) => col.name === queryState.where?.column,
+  );
+  const whereOperators = selectedWhereColumn
+    ? OPERATORS_BY_TYPE[selectedWhereColumn.type]
+    : ["="];
 
   return (
     <div className="flex h-screen bg-slate-900 text-slate-100">
@@ -93,7 +138,7 @@ export default function Dashboard() {
         {/* Header */}
         <div className="border-b border-slate-700 bg-slate-800 p-4">
           <h1 className="text-2xl font-bold text-slate-100">
-            {tableConfig?.displayName || "Database Explorer"}
+            {resolvedTableConfig?.displayName || "Database Explorer"}
           </h1>
         </div>
 
@@ -118,7 +163,9 @@ export default function Dashboard() {
                       onClick={() =>
                         setQueryState((prev) => ({
                           ...prev,
-                          select: tableConfig?.columns.map((col) => col.name),
+                          select: resolvedTableConfig?.columns.map(
+                            (col) => col.name,
+                          ),
                         }))
                       }
                       className="rounded bg-slate-600 px-2 py-1 text-xs text-slate-100 hover:bg-slate-500"
@@ -139,7 +186,7 @@ export default function Dashboard() {
                     </button>
                   </div>
                   <div className="grid max-h-28 grid-cols-2 gap-2 overflow-y-auto pr-1">
-                    {tableConfig?.columns.map((col) => {
+                    {resolvedTableConfig?.columns.map((col) => {
                       const checked = (queryState.select || []).includes(
                         col.name,
                       );
@@ -204,7 +251,7 @@ export default function Dashboard() {
                     className="flex-1 px-3 py-2 bg-slate-700 border border-slate-600 rounded text-slate-100 focus:outline-none focus:border-blue-500"
                   >
                     <option value="">None</option>
-                    {tableConfig?.columns.map((col) => (
+                    {resolvedTableConfig?.columns.map((col) => (
                       <option key={col.name} value={col.name}>
                         {col.name}
                       </option>
@@ -253,7 +300,7 @@ export default function Dashboard() {
                   className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded text-slate-100 focus:outline-none focus:border-blue-500"
                 >
                   <option value="">None</option>
-                  {tableConfig?.columns
+                  {resolvedTableConfig?.columns
                     .filter((col) => col.groupable)
                     .map((col) => (
                       <option key={col.name} value={col.name}>
@@ -345,23 +392,32 @@ export default function Dashboard() {
                   <select
                     value={queryState.where?.column || ""}
                     onChange={(e) =>
-                      setQueryState((prev) =>
-                        e.target.value
-                          ? {
-                              ...prev,
-                              where: {
-                                column: e.target.value,
-                                operator: "=",
-                                value: "",
-                              },
-                            }
-                          : { ...prev, where: undefined },
-                      )
+                      setQueryState((prev) => {
+                        if (!e.target.value) {
+                          return { ...prev, where: undefined };
+                        }
+
+                        const nextColumn = resolvedTableConfig?.columns.find(
+                          (col) => col.name === e.target.value,
+                        );
+                        const operators = nextColumn
+                          ? OPERATORS_BY_TYPE[nextColumn.type]
+                          : ["="];
+
+                        return {
+                          ...prev,
+                          where: {
+                            column: e.target.value,
+                            operator: operators[0] || "=",
+                            value: "",
+                          },
+                        };
+                      })
                     }
                     className="px-3 py-2 bg-slate-700 border border-slate-600 rounded text-slate-100 focus:outline-none focus:border-blue-500"
                   >
                     <option value="">None</option>
-                    {tableConfig?.columns
+                    {resolvedTableConfig?.columns
                       .filter((col) => col.filterable)
                       .map((col) => (
                         <option key={col.name} value={col.name}>
@@ -373,6 +429,7 @@ export default function Dashboard() {
                   {queryState.where && (
                     <>
                       <select
+                        key={`${queryState.where.column}-${selectedWhereColumn?.type || "unknown"}`}
                         value={queryState.where.operator}
                         onChange={(e) =>
                           setQueryState((prev) =>
@@ -389,13 +446,11 @@ export default function Dashboard() {
                         }
                         className="px-3 py-2 bg-slate-700 border border-slate-600 rounded text-slate-100 focus:outline-none focus:border-blue-500"
                       >
-                        <option value="=">=</option>
-                        <option value="!=">!=</option>
-                        <option value=">">{">"}</option>
-                        <option value="<">{"<"}</option>
-                        <option value=">=">{">="}</option>
-                        <option value="<=">&lt;=</option>
-                        <option value="LIKE">LIKE</option>
+                        {whereOperators.map((operator) => (
+                          <option key={operator} value={operator}>
+                            {operator}
+                          </option>
+                        ))}
                       </select>
 
                       <input
@@ -531,3 +586,4 @@ export default function Dashboard() {
     </div>
   );
 }
+ 
