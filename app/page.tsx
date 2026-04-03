@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { executeQuery, type QueryParams } from "@/app/actions";
+import { executeQuery, executeRawSql, type QueryParams } from "@/app/actions";
 import {
   getTableNames,
   getTableConfig,
@@ -36,6 +36,9 @@ export default function Dashboard() {
   });
   const [result, setResult] = useState<QueryResultData | null>(null);
   const [loading, setLoading] = useState(false);
+  const [manualSql, setManualSql] = useState<string>(
+    'SELECT * FROM "customer" LIMIT 50;',
+  );
 
   // Load table config when selected table changes
   useEffect(() => {
@@ -93,6 +96,22 @@ export default function Dashboard() {
       setResult({
         data: [],
         sql: null,
+        error: error instanceof Error ? error.message : "Unknown error",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleRunManualSql = async () => {
+    setLoading(true);
+    try {
+      const manualResult = await executeRawSql(manualSql);
+      setResult(manualResult);
+    } catch (error) {
+      setResult({
+        data: [],
+        sql: manualSql,
         error: error instanceof Error ? error.message : "Unknown error",
       });
     } finally {
@@ -511,6 +530,33 @@ export default function Dashboard() {
             >
               {loading ? "Running..." : "Run Query"}
             </button>
+          </div>
+
+          <div className="rounded-lg border border-slate-700 bg-slate-800 p-4 md:p-6">
+            <h2 className="text-lg font-semibold text-slate-200 mb-4">
+              Manual SQL
+            </h2>
+            <p className="mb-3 text-sm text-slate-400">
+              Type your own SQL query and run it directly. Only read-only
+              SELECT/CTE queries are allowed.
+            </p>
+            <textarea
+              value={manualSql}
+              onChange={(e) => setManualSql(e.target.value)}
+              rows={6}
+              placeholder='SELECT * FROM "customer" LIMIT 50;'
+              className="w-full rounded border border-slate-600 bg-slate-900 p-3 font-mono text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-blue-500"
+            />
+            <div className="mt-4 flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={handleRunManualSql}
+                disabled={loading}
+                className="cursor-pointer rounded bg-emerald-600 px-6 py-2 font-medium text-white transition-colors hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-gray-400"
+              >
+                {loading ? "Running..." : "Run Manual SQL"}
+              </button>
+            </div>
           </div>
 
           {result && (

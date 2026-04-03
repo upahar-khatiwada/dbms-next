@@ -30,6 +30,56 @@ export interface QueryResult {
   error?: string;
 }
 
+const COLUMN_MAP_PRISMA_TO_DB: Record<string, Record<string, string>> = {
+  Customer: {
+    customerId: "customer_id",
+    dateOfBirth: "date_of_birth",
+    branchId: "branch_id",
+  },
+  Account: {
+    accNo: "acc_no",
+  },
+  Loan: {
+    loanId: "loan_id",
+  },
+  Transaction: {
+    transactionId: "transaction_id",
+    accNo: "acc_no",
+  },
+  Branch: {
+    branchId: "branch_id",
+  },
+  Employee: {
+    employeeId: "employee_id",
+    branchId: "branch_id",
+  },
+  EmployeePhone: {
+    employeeId: "employee_id",
+    phoneNumber: "phone_number",
+  },
+  CustomerPhone: {
+    customerId: "customer_id",
+    phoneNumber: "phone_number",
+  },
+  CustomerAccount: {
+    customerId: "customer_id",
+    accNo: "acc_no",
+  },
+  CustomerLoan: {
+    customerId: "customer_id",
+    loanId: "loan_id",
+  },
+};
+
+function isReadOnlySql(sql: string): boolean {
+  const normalized = sql.trim().replace(/;+\s*$/, "");
+  if (!normalized) {
+    return false;
+  }
+
+  return /^(select|with)\b/i.test(normalized);
+}
+
 function toClientSafeValue(value: unknown): unknown {
   if (value === null || value === undefined) {
     return value;
@@ -91,20 +141,28 @@ async function executePrismaQuery(
   // SELECT columns
   if (params.select && params.select.length > 0) {
     queryOpts.select = Object.fromEntries(
-      params.select.map((column) => [column, true]),
+      params.select.map((column) => [getPrismaFieldName(table, column), true]),
     );
   }
 
   // WHERE clause
   if (params.where) {
     const { column, operator, value } = params.where;
-    queryOpts.where = buildWhereClause(table, column, operator, value);
+    const columnType = getColumnType(table, column);
+    const prismaField = getPrismaFieldName(table, column);
+    queryOpts.where = buildWhereClause(
+      prismaField,
+      operator,
+      value,
+      columnType,
+    );
   }
 
   // ORDER BY
   if (params.orderBy) {
     queryOpts.orderBy = {
-      [params.orderBy.column]: params.orderBy.direction || "asc",
+      [getPrismaFieldName(table, params.orderBy.column)]:
+        params.orderBy.direction || "asc",
     };
   }
 
@@ -113,34 +171,36 @@ async function executePrismaQuery(
     queryOpts.take = params.limit;
   }
 
-  return await prismaTable.findMany(queryOpts);
+  const rows = await prismaTable.findMany(queryOpts);
+  return rows.map((row: Record<string, unknown>) =>
+    mapRowKeysToDatabaseColumns(table, row),
+  );
 }
 
 function buildWhereClause(
-  table: string,
-  column: string,
+  prismaField: string,
   operator: string,
   value: string,
+  columnType?: ColumnType,
 ): Record<string, unknown> {
-  const columnType = getColumnType(table, column);
   const safeOperator = normalizeOperator(operator, columnType);
   const parsedValue = parseFilterValue(value, columnType);
 
   switch (safeOperator) {
     case "=":
-      return { [column]: parsedValue };
+      return { [prismaField]: parsedValue };
     case "!=":
-      return { [column]: { not: parsedValue } };
+      return { [prismaField]: { not: parsedValue } };
     case ">":
-      return { [column]: { gt: parsedValue } };
+      return { [prismaField]: { gt: parsedValue } };
     case "<":
-      return { [column]: { lt: parsedValue } };
+      return { [prismaField]: { lt: parsedValue } };
     case ">=":
-      return { [column]: { gte: parsedValue } };
+      return { [prismaField]: { gte: parsedValue } };
     case "<=":
-      return { [column]: { lte: parsedValue } };
+      return { [prismaField]: { lte: parsedValue } };
     case "LIKE":
-      return { [column]: { contains: value, mode: "insensitive" } };
+      return { [prismaField]: { contains: value, mode: "insensitive" } };
     default:
       return {};
   }
@@ -254,6 +314,38 @@ export async function executeQuery(params: QueryParams): Promise<QueryResult> {
   }
 }
 
+export async function executeRawSql(sql: string): Promise<QueryResult> {
+  try {
+    const trimmedSql = sql.trim();
+
+    if (!trimmedSql) {
+      return { data: [], sql: null, error: "SQL query cannot be empty" };
+    }
+
+    if (!isReadOnlySql(trimmedSql)) {
+      return {
+        data: [],
+        sql: trimmedSql,
+        error: "Only read-only SELECT/CTE queries are allowed",
+      };
+    }
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const data = await (prisma as unknown as any).$queryRawUnsafe(trimmedSql);
+
+    return {
+      data: toClientSafeValue(data) as Record<string, unknown>[],
+      sql: trimmedSql,
+    };
+  } catch (error) {
+    return {
+      data: [],
+      sql: sql.trim() || null,
+      error: error instanceof Error ? error.message : "Unknown error",
+    };
+  }
+}
+
 function getTableName(modelName: string): string {
   // Map model names to table names (using @map from schema)
   const tableMap: Record<string, string> = {
@@ -272,50 +364,28 @@ function getTableName(modelName: string): string {
 }
 
 function getColumnName(modelName: string, fieldName: string): string {
-  // Map field names to column names (using @map from schema)
-  const columnMap: Record<string, Record<string, string>> = {
-    Customer: {
-      customerId: "customer_id",
-      dateOfBirth: "date_of_birth",
-      branchId: "branch_id",
-    },
-    Account: {
-      accNo: "acc_no",
-    },
-    Loan: {
-      loanId: "loan_id",
-    },
-    Transaction: {
-      transactionId: "transaction_id",
-      accNo: "acc_no",
-    },
-    Branch: {
-      branchId: "branch_id",
-    },
-    Employee: {
-      employeeId: "employee_id",
-      branchId: "branch_id",
-    },
-    EmployeePhone: {
-      employeeId: "employee_id",
-      phoneNumber: "phone_number",
-    },
-    CustomerPhone: {
-      customerId: "customer_id",
-      phoneNumber: "phone_number",
-    },
-    CustomerAccount: {
-      customerId: "customer_id",
-      accNo: "acc_no",
-    },
-    CustomerLoan: {
-      customerId: "customer_id",
-      loanId: "loan_id",
-    },
-  };
-
-  const map = columnMap[modelName] || {};
+  const map = COLUMN_MAP_PRISMA_TO_DB[modelName] || {};
   return map[fieldName] || fieldName;
+}
+
+function getPrismaFieldName(modelName: string, columnName: string): string {
+  const map = COLUMN_MAP_PRISMA_TO_DB[modelName] || {};
+  const entry = Object.entries(map).find(
+    ([, dbColumn]) => dbColumn === columnName,
+  );
+  return entry?.[0] || columnName;
+}
+
+function mapRowKeysToDatabaseColumns(
+  modelName: string,
+  row: Record<string, unknown>,
+): Record<string, unknown> {
+  return Object.fromEntries(
+    Object.entries(row).map(([key, value]) => [
+      getColumnName(modelName, key),
+      value,
+    ]),
+  );
 }
 
 function getColumnType(

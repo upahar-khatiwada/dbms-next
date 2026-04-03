@@ -18,42 +18,47 @@ export interface TableDef {
 export const tableConfig: Record<string, TableDef> = {
   Customer: {
     name: "Customer",
-    displayName: "Customers",
+    displayName: "customer",
     columns: [
-      { name: "customerId", type: "number", groupable: true, filterable: true },
+      {
+        name: "customer_id",
+        type: "number",
+        groupable: true,
+        filterable: true,
+      },
       { name: "name", type: "string", groupable: true, filterable: true },
       { name: "address", type: "string", groupable: true, filterable: true },
-      { name: "dateOfBirth", type: "date", filterable: true },
-      { name: "branchId", type: "number", groupable: true, filterable: true },
+      { name: "date_of_birth", type: "date", filterable: true },
+      { name: "branch_id", type: "number", groupable: true, filterable: true },
     ],
   },
   Account: {
     name: "Account",
-    displayName: "Accounts",
+    displayName: "account",
     columns: [
-      { name: "accNo", type: "number", groupable: true, filterable: true },
+      { name: "acc_no", type: "number", groupable: true, filterable: true },
       { name: "balance", type: "decimal", filterable: true },
     ],
   },
   Loan: {
     name: "Loan",
-    displayName: "Loans",
+    displayName: "loan",
     columns: [
-      { name: "loanId", type: "number", groupable: true, filterable: true },
+      { name: "loan_id", type: "number", groupable: true, filterable: true },
       { name: "amount", type: "decimal", filterable: true },
     ],
   },
   Transaction: {
     name: "Transaction",
-    displayName: "Transactions",
+    displayName: "transactions",
     columns: [
       {
-        name: "transactionId",
+        name: "transaction_id",
         type: "number",
         groupable: true,
         filterable: true,
       },
-      { name: "accNo", type: "number", groupable: true, filterable: true },
+      { name: "acc_no", type: "number", groupable: true, filterable: true },
       { name: "type", type: "enum", groupable: true, filterable: true },
       { name: "amount", type: "decimal", filterable: true },
       { name: "date", type: "date", groupable: true, filterable: true },
@@ -61,19 +66,24 @@ export const tableConfig: Record<string, TableDef> = {
   },
   Branch: {
     name: "Branch",
-    displayName: "Branches",
+    displayName: "branch",
     columns: [
-      { name: "branchId", type: "number", groupable: true, filterable: true },
+      { name: "branch_id", type: "number", groupable: true, filterable: true },
       { name: "name", type: "string", groupable: true, filterable: true },
       { name: "address", type: "string", groupable: true, filterable: true },
     ],
   },
   Employee: {
     name: "Employee",
-    displayName: "Employees",
+    displayName: "employee",
     columns: [
-      { name: "employeeId", type: "number", groupable: true, filterable: true },
-      { name: "branchId", type: "number", groupable: true, filterable: true },
+      {
+        name: "employee_id",
+        type: "number",
+        groupable: true,
+        filterable: true,
+      },
+      { name: "branch_id", type: "number", groupable: true, filterable: true },
       { name: "name", type: "string", groupable: true, filterable: true },
       { name: "address", type: "string", groupable: true, filterable: true },
       { name: "salary", type: "decimal", groupable: true, filterable: true },
@@ -81,36 +91,56 @@ export const tableConfig: Record<string, TableDef> = {
   },
   CustomerPhone: {
     name: "CustomerPhone",
-    displayName: "Customer Phones",
+    displayName: "customer_phone",
     columns: [
       { name: "id", type: "number", groupable: true, filterable: true },
-      { name: "customerId", type: "number", groupable: true, filterable: true },
-      { name: "phoneNumber", type: "string", filterable: true },
+      {
+        name: "customer_id",
+        type: "number",
+        groupable: true,
+        filterable: true,
+      },
+      { name: "phone_number", type: "string", filterable: true },
     ],
   },
   EmployeePhone: {
     name: "EmployeePhone",
-    displayName: "Employee Phones",
+    displayName: "employee_phone",
     columns: [
       { name: "id", type: "number", groupable: true, filterable: true },
-      { name: "employeeId", type: "number", groupable: true, filterable: true },
-      { name: "phoneNumber", type: "string", filterable: true },
+      {
+        name: "employee_id",
+        type: "number",
+        groupable: true,
+        filterable: true,
+      },
+      { name: "phone_number", type: "string", filterable: true },
     ],
   },
   CustomerAccount: {
     name: "CustomerAccount",
-    displayName: "Customer Accounts",
+    displayName: "customer_account",
     columns: [
-      { name: "customerId", type: "number", groupable: true, filterable: true },
-      { name: "accNo", type: "number", groupable: true, filterable: true },
+      {
+        name: "customer_id",
+        type: "number",
+        groupable: true,
+        filterable: true,
+      },
+      { name: "acc_no", type: "number", groupable: true, filterable: true },
     ],
   },
   CustomerLoan: {
     name: "CustomerLoan",
-    displayName: "Customer Loans",
+    displayName: "customer_loan",
     columns: [
-      { name: "customerId", type: "number", groupable: true, filterable: true },
-      { name: "loanId", type: "number", groupable: true, filterable: true },
+      {
+        name: "customer_id",
+        type: "number",
+        groupable: true,
+        filterable: true,
+      },
+      { name: "loan_id", type: "number", groupable: true, filterable: true },
     ],
   },
 };
