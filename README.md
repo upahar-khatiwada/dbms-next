@@ -1,36 +1,70 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# DBMS Group Project
 
-## Getting Started
+> **Project Work of DBMS** made by:
+> - Upahar Khatiwada (080BCT094)
+> - Suparna Neupane (080BCT091)
+> - Saurav Adhikari (080BCT079)
 
-First, run the development server:
+---
+
+## 🚀 Getting Started
+
+Follow the steps below to run this project locally.
+
+### 1. Clone the Repository
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+git clone https://github.com/upahar-khatiwada/dbms-next.git
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### 2. Open the Project in a Code Editor
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Open the cloned folder in your preferred code editor (e.g., VS Code).
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### 3. Install Dependencies
 
-## Learn More
+Make sure [Bun](https://bun.sh/) is installed as the TypeScript runtime, then run:
 
-To learn more about Next.js, take a look at the following resources:
+```bash
+bun install
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+> To install Bun: `curl -fsSL https://bun.sh/install | bash`
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### 4. Set Up Environment Variables
 
-## Deploy on Vercel
+Create a `.env` file in the root of the project and add your database connection URL:
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+```env
+DATABASE_URL="your_database_connection_url_here"
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+> Replace `your_database_connection_url_here` with your actual database URL (e.g., a PostgreSQL connection string).
+
+### 5. Generate Prisma Client
+
+```bash
+bunx --bun prisma generate
+```
+
+### 6. Seed the Database
+
+```bash
+bunx --bun prisma db seed
+```
+
+### 7. Run the Development Server
+
+```bash
+bun run dev
+```
+
+The app should now be running at [http://localhost:3000](http://localhost:3000).
+
+---
+
+## 🛠 Tech Stack
+
+- [Next.js](https://nextjs.org/)
+- [Bun](https://bun.sh/)
+- [Prisma](https://www.prisma.io/)
